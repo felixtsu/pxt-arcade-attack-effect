@@ -1,5 +1,5 @@
-//% weight=100 color=#6699CC icon="\uf140" block="SpecialAttack"
-//% groups='["attack"]'
+// % weight=100 color=#6699CC icon="\u2593"
+// block="SpecialAttack" % groups='["Attack"]'
 namespace attackEffect {
 
     export enum LaserAttackDirection {
@@ -9,58 +9,86 @@ namespace attackEffect {
         DOWN
     }
 
-    const COLOR_WHITE = 1
-    const COLOR_RED = 2
+    const COLOR_INNER = 1
+    const COLOR_OUTER = 2
 
-    function spriteInRange(candidate: Sprite, x: number, y: number, direction: LaserAttackDirection, width: number) {
-
+    class LaserAttackCallback {
+        spriteKind: number
+        callback: (sprite: Sprite) => void
+        constructor(spriteKind: number, callback: (sprite: Sprite) => void) {
+            this.spriteKind = spriteKind;
+            this.callback = callback
+        }
     }
 
     class LaserAttackChecker {
-
         private left: number
         private right: number
         private top: number
         private bottom: number
 
-
-        private spriteKind: number
         private sprite: Sprite
         private width: number
-        private spriteDamageCallback: (sprites: Sprite[]) => void
         private direction: LaserAttackDirection
 
         private active: boolean
 
-        define(sprite: Sprite, width: number, direction: LaserAttackDirection, spriteKind: number, spriteDamageCallback: (sprites: Sprite[]) => void) {
+        private overlapCheckerImage: Image
+        private overlapCheckerImageCenterX: number
+        private overlapCheckerImageCenterY: number
+
+        private onHitCallbacks: LaserAttackCallback[]
+
+        private hitSprites :Sprite[]
+
+        define(sprite: Sprite, width: number, direction: LaserAttackDirection) {
             this.active = true
             this.sprite = sprite
             this.width = width
             this.direction = direction
-            this.spriteKind = spriteKind
-            this.spriteDamageCallback = spriteDamageCallback
 
+            // reset hit sprites every time
+            this.hitSprites = []
         }
 
-        createCheckerImage():Image {
+        resetOverlapChecker() {
             let result = null;
             if (this.direction == LaserAttackDirection.RIGHT) {
                 this.left = this.sprite.x
-                this.right = 120
+                this.right = 180
                 this.top = this.sprite.y - this.width / 2
                 this.bottom = this.sprite.y + this.width / 2
 
-                result = image.create(this.right - this.left, this.bottom - this.top) 
-                
+                result = image.create(this.right - this.left, this.bottom - this.top)
+
 
             }
             result.fill(1)
-            return result
+            this.overlapCheckerImage = result
+            this.overlapCheckerImageCenterX = (this.right + this.left) / 2
+            this.overlapCheckerImageCenterY = (this.top + this.bottom) / 2
         }
 
-        
+        checkOverlap(candidate: Sprite) {
+            if (this.direction == LaserAttackDirection.RIGHT) {
+                if (candidate.x < this.left) {
+                    return false;
+                } else {
+                    return this.top < candidate.y && candidate.y < this.bottom
+                }
+            }
+            return false;
+        }
+
+
         constructor() {
+            this.onHitCallbacks = []
             this._init()
+        }
+
+
+        registerOnHitCallbacks(spriteKind: number, onHitCallback: (sprite: Sprite) => void) {
+            this.onHitCallbacks.push(new LaserAttackCallback(spriteKind, onHitCallback))
         }
 
         stop() {
@@ -75,18 +103,29 @@ namespace attackEffect {
 
             let attackSprites: Sprite[] = []
 
-            let checkerImage = this.createCheckerImage()
+            this.resetOverlapChecker()
 
-            for (let candidate of sprites.allOfKind(this.spriteKind)) {
-                if (candidate.flags & (sprites.Flag.Ghost | sprites.Flag.RelativeToCamera)) {
-                    continue
-                }
+            for (let callback of this.onHitCallbacks) {
+                for (let candidate of sprites.allOfKind(callback.spriteKind)) {
+                    if (this.hitSprites.find((value:Sprite) => value === candidate)) {
+                        continue
+                    }
 
-                if (candidate.image.overlapsWith(checkerImage, candidate.x - this.sprite.x, candidate.y - this.sprite.y + this.width / 2)) {
-                    attackSprites.push(candidate)
+                    if (candidate.flags & (sprites.Flag.Ghost | sprites.Flag.RelativeToCamera)) {
+                        continue
+                    }
+
+                    if (this.checkOverlap(candidate)) {
+                        this.hitSprites.push(candidate)
+                        control.runInParallel(function () {
+                            callback.callback(candidate)
+                        })
+                    }
                 }
+                
             }
-            this.spriteDamageCallback(attackSprites)
+
+
         }
 
 
@@ -147,13 +186,13 @@ namespace attackEffect {
         draw() {
             this.clearEffect()
 
-            LaserAttackAnimation.laserAttackAnimationBgImage.fillCircle(this.x, this.y, this.width, COLOR_RED)
+            LaserAttackAnimation.laserAttackAnimationBgImage.fillCircle(this.x, this.y, this.width, COLOR_OUTER)
             switch (this.direction) {
                 case LaserAttackDirection.RIGHT:
-                    LaserAttackAnimation.laserAttackAnimationBgImage.fillRect(this.x, this.y - this.width / 2, 160 - this.x, this.width, COLOR_RED)
-                    LaserAttackAnimation.laserAttackAnimationBgImage.fillRect(this.x, this.y - this.width / 4, 160 - this.x, this.width / 2, COLOR_WHITE)
+                    LaserAttackAnimation.laserAttackAnimationBgImage.fillRect(this.x, this.y - this.width / 2, 160 - this.x, this.width, COLOR_OUTER)
+                    LaserAttackAnimation.laserAttackAnimationBgImage.fillRect(this.x, this.y - this.width / 4, 160 - this.x, this.width / 2, COLOR_INNER)
             }
-            LaserAttackAnimation.laserAttackAnimationBgImage.fillCircle(this.x, this.y, this.width / 2, COLOR_WHITE)
+            LaserAttackAnimation.laserAttackAnimationBgImage.fillCircle(this.x, this.y, this.width / 2, COLOR_INNER)
         }
 
         onPaintListener() {
@@ -167,13 +206,17 @@ namespace attackEffect {
 
     let checker = new LaserAttackChecker()
     let laserAttackAnimation = new LaserAttackAnimation()
+    let laserAttackCallbacks: LaserAttackCallback[] = []
 
-    //%block
+
+    //% blockId=launch_laser_attack
+    //% block="launch laser attack from %sprite=variables_get(mySprite) to %direction=direction by %width for %duration=timePicker|ms"
+     //% width.defl=40 duration.defl=1000 direction.defl= LaserAttackDirection.RIGHT
+    //% group="Attack"
     export function laserAttack(sprite: Sprite, direction: LaserAttackDirection,
-        width: number, duration: number,
-        spriteKind: number, spriteDamageCallback: (sprites: Sprite[]) => void) {
+        width: number, duration: number) {
 
-        checker.define(sprite, width, direction, spriteKind, spriteDamageCallback)
+        checker.define(sprite, width, direction)
         laserAttackAnimation.define(sprite, width, direction)
 
         control.runInParallel(function () {
@@ -181,6 +224,16 @@ namespace attackEffect {
             checker.stop()
             laserAttackAnimation.stopAnimation()
         })
+    }
+
+
+
+    //% blockId=on_laser_hit
+    //% group="Attack"
+    //% block="on laser hits of %spriteKind=spritekind"
+    //% draggableParameters="sprite"
+    export function onLaserHit(spriteKind: number, spriteHitCallback: (sprite: Sprite) => void) {
+        checker.registerOnHitCallbacks(spriteKind, spriteHitCallback)
     }
 
 }
