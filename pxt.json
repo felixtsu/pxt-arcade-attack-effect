@@ -1,0 +1,18 @@
+{
+    "version": "0.1.0",
+    "description": "special attacks",
+    "name": "attack-effect",
+    "dependencies": {
+        "device": "*"
+    },
+    "files": [
+        "main.blocks",
+        "main.ts",
+        "README.md",
+        "test.ts"
+    ],
+    "preferredEditor": "tsprj",
+    "testFiles": [
+        "test.ts"
+    ]
+}
