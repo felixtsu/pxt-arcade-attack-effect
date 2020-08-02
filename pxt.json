@@ -1,6 +1,6 @@
 {
     "name": "attack-effect",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "special attacks",
     "dependencies": {
         "device": "*"
