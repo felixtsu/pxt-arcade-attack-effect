@@ -168,7 +168,6 @@ namespace attackEffect {
         public static _init = (() => {
             if (!LaserAttackAnimation.laserAttackAnimationBgImage) {
                 LaserAttackAnimation.laserAttackAnimationBgImage = image.create(160, 120)
-                scene.addBackgroundLayer(LaserAttackAnimation.laserAttackAnimationBgImage, 100, BackgroundAlignment.Left)
             }
             return true;
         })()
@@ -193,6 +192,7 @@ namespace attackEffect {
                     LaserAttackAnimation.laserAttackAnimationBgImage.fillRect(this.x, this.y - this.width / 4, 160 - this.x, this.width / 2, COLOR_INNER)
             }
             LaserAttackAnimation.laserAttackAnimationBgImage.fillCircle(this.x, this.y, this.width / 2, COLOR_INNER)
+            screen.drawTransparentImage(LaserAttackAnimation.laserAttackAnimationBgImage, 0, 0)
         }
 
         onPaintListener() {
@@ -207,7 +207,6 @@ namespace attackEffect {
     let checker = new LaserAttackChecker()
     let laserAttackAnimation = new LaserAttackAnimation()
     let laserAttackCallbacks: LaserAttackCallback[] = []
-
 
     //% blockId=launch_laser_attack
     //% block="launch laser attack from %sprite=variables_get(mySprite) to %direction=direction by %width for %duration=timePicker|ms"

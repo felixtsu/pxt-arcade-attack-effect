@@ -1,7 +1,7 @@
 {
+    "name": "attack-effect",
     "version": "0.1.2",
     "description": "special attacks",
-    "name": "attack-effect",
     "dependencies": {
         "device": "*"
     },
@@ -11,8 +11,15 @@
         "README.md",
         "test.ts"
     ],
-    "preferredEditor": "tsprj",
     "testFiles": [
         "test.ts"
-    ]
+    ],
+    "targetVersions": {
+        "target": "1.0.16",
+        "targetId": "arcade"
+    },
+    "supportedTargets": [
+        "arcade"
+    ],
+    "preferredEditor": "tsprj"
 }
