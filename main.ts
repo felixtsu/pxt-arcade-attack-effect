@@ -12,7 +12,7 @@ namespace attackEffect {
     const COLOR_INNER = 1
     const COLOR_OUTER = 2
 
-    class LaserAttackCallback {
+    class OnHitCallback {
         spriteKind: number
         callback: (sprite: Sprite) => void
         constructor(spriteKind: number, callback: (sprite: Sprite) => void) {
@@ -21,7 +21,19 @@ namespace attackEffect {
         }
     }
 
-    class LaserAttackChecker {
+    abstract class AttackChecker {
+
+        constructor() {
+            this.onHitCallbacks = []
+        }
+
+        protected onHitCallbacks: OnHitCallback[]
+        registerOnHitCallbacks(spriteKind: number, onHitCallback: (sprite: Sprite) => void) {
+            this.onHitCallbacks.push(new OnHitCallback(spriteKind, onHitCallback))
+        }
+    }
+
+    class LaserAttackChecker extends AttackChecker {
         private left: number
         private right: number
         private top: number
@@ -36,8 +48,6 @@ namespace attackEffect {
         private overlapCheckerImage: Image
         private overlapCheckerImageCenterX: number
         private overlapCheckerImageCenterY: number
-
-        private onHitCallbacks: LaserAttackCallback[]
 
         private hitSprites :Sprite[]
 
@@ -82,14 +92,12 @@ namespace attackEffect {
 
 
         constructor() {
-            this.onHitCallbacks = []
+            super()
             this._init()
         }
 
 
-        registerOnHitCallbacks(spriteKind: number, onHitCallback: (sprite: Sprite) => void) {
-            this.onHitCallbacks.push(new LaserAttackCallback(spriteKind, onHitCallback))
-        }
+       
 
         stop() {
             this.active = false;
@@ -204,9 +212,57 @@ namespace attackEffect {
         }
     }
 
+    class ExplosionAttackChecker extends AttackChecker {
+        
+
+        private x:number;
+        private y:number;
+        private radius:number;
+
+        constructor() {
+            super()
+        }
+
+        define(x:number, y:number, radius:number) {
+            this.x = x;
+            this.y = y;
+            this.radius = radius
+        }
+
+        clone() : ExplosionAttackChecker {
+            let result = new ExplosionAttackChecker() 
+            for (let cb of this.onHitCallbacks) {
+                result.onHitCallbacks.push(cb)
+            }
+            return result;
+        }
+
+        checkOverlap(candidate:Sprite) {
+            return Math.pow(candidate.x - this.x, 2) + Math.pow(candidate.y - this.y, 2) <= this.radius * this.radius
+        }
+
+        notifyOnHitCallbacks() {
+            for (let callback of this.onHitCallbacks) {
+                for (let candidate of sprites.allOfKind(callback.spriteKind)) {                
+                    if (candidate.flags & (sprites.Flag.Ghost | sprites.Flag.RelativeToCamera)) {
+                        continue
+                    }
+
+                    if (this.checkOverlap(candidate)) {
+                        control.runInParallel(function () {
+                            callback.callback(candidate)
+                        })
+                    }
+                }
+                
+            }
+
+        }
+    }
+
     let checker = new LaserAttackChecker()
     let laserAttackAnimation = new LaserAttackAnimation()
-    let laserAttackCallbacks: LaserAttackCallback[] = []
+    let laserAttackCallbacks: OnHitCallback[] = []
 
     //% blockId=launch_laser_attack
     //% block="launch laser attack from %sprite=variables_get(mySprite) to %direction=direction by %width for %duration=timePicker|ms"
@@ -227,12 +283,35 @@ namespace attackEffect {
 
 
 
+    
+
     //% blockId=on_laser_hit
     //% group="Attack"
     //% block="on laser hits of %spriteKind=spritekind"
     //% draggableParameters="sprite"
     export function onLaserHit(spriteKind: number, spriteHitCallback: (sprite: Sprite) => void) {
         checker.registerOnHitCallbacks(spriteKind, spriteHitCallback)
+    }
+
+    let explosionAttackChecker = new ExplosionAttackChecker()
+
+    //% blockId=on_explosion_hit
+    //% group="Attack"
+    //% block="on explosion hits of %spriteKind=spritekind"
+    //% draggableParameters="sprite"
+    export function onExplosionHit(spriteKind: number, spriteHitCallback: (sprite: Sprite) => void) {
+        explosionAttackChecker.registerOnHitCallbacks(spriteKind, spriteHitCallback)
+    }
+    //% blockId=explode_attack
+    //% block="explode %sprite=variables_get(mySprite) with radius %radius "
+     //% radius.defl=20 
+    //% group="Attack"
+    export function explode(sprite:Sprite, radius:number) {
+        sprite.vx = 0
+        sprite.vy = 0 
+        sprite.destroy(effects.spray, 1000)
+        let checker = explosionAttackChecker.clone()
+        checker.d(sprite.x, sprite.y, radius) 
     }
 
 }
