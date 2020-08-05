@@ -311,7 +311,8 @@ namespace attackEffect {
         sprite.vy = 0 
         sprite.destroy(effects.spray, 1000)
         let checker = explosionAttackChecker.clone()
-        checker.d(sprite.x, sprite.y, radius) 
+        checker.define(sprite.x, sprite.y, radius) 
+        checker.notifyOnHitCallbacks()
     }
 
 }
