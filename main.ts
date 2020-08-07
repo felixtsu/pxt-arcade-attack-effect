@@ -21,6 +21,12 @@ namespace attackEffect {
         }
     }
 
+    interface AttackAnimation {
+
+        draw(canvas:Image):void
+        
+    }
+
     abstract class AttackChecker {
 
         constructor() {
@@ -96,9 +102,6 @@ namespace attackEffect {
             this._init()
         }
 
-
-       
-
         stop() {
             this.active = false;
         }
@@ -145,76 +148,49 @@ namespace attackEffect {
 
     }
 
-    class LaserAttackAnimation {
-        private static laserAttackAnimationBgImage: Image
+    class LaserAttackAnimation implements AttackAnimation {
         private direction: LaserAttackDirection
-        private x: number
-        private y: number
         private width: number
-        private active: boolean
         private sprite: Sprite
 
-
-        constructor() {
-            this._init()
-        }
-
-
-        define(sprite: Sprite, width: number, direction: LaserAttackDirection) {
+        constructor(sprite: Sprite, width: number, direction: LaserAttackDirection) {
             this.sprite = sprite
             this.width = width
             this.direction = direction
-            this.active = true
         }
 
-        stopAnimation() {
-            this.active = false;
-            this.clearEffect()
-        }
-
-
-        public static _init = (() => {
-            if (!LaserAttackAnimation.laserAttackAnimationBgImage) {
-                LaserAttackAnimation.laserAttackAnimationBgImage = image.create(160, 120)
-            }
-            return true;
-        })()
-
-        clearEffect() {
-            LaserAttackAnimation.laserAttackAnimationBgImage.fill(0)
-        }
-
-        _init() {
-            game.onPaint(() => {
-                this.onPaintListener()
-            })
-        }
-
-        draw() {
-            this.clearEffect()
-
-            LaserAttackAnimation.laserAttackAnimationBgImage.fillCircle(this.x, this.y, this.width, COLOR_OUTER)
+        draw(canvas:Image) {
+            canvas.fillCircle(this.sprite.x, this.sprite.y, this.width, COLOR_OUTER)
             switch (this.direction) {
                 case LaserAttackDirection.RIGHT:
-                    LaserAttackAnimation.laserAttackAnimationBgImage.fillRect(this.x, this.y - this.width / 2, 160 - this.x, this.width, COLOR_OUTER)
-                    LaserAttackAnimation.laserAttackAnimationBgImage.fillRect(this.x, this.y - this.width / 4, 160 - this.x, this.width / 2, COLOR_INNER)
+                    canvas.fillRect(this.sprite.x, this.sprite.y - this.width / 2, 160 - this.sprite.x, this.width, COLOR_OUTER)
+                    canvas.fillRect(this.sprite.x, this.sprite.y - this.width / 4, 160 - this.sprite.x, this.width / 2, COLOR_INNER)
             }
-            LaserAttackAnimation.laserAttackAnimationBgImage.fillCircle(this.x, this.y, this.width / 2, COLOR_INNER)
-            screen.drawTransparentImage(LaserAttackAnimation.laserAttackAnimationBgImage, 0, 0)
+            canvas.fillCircle(this.sprite.x, this.sprite.y, this.width / 2, COLOR_INNER)
         }
 
-        onPaintListener() {
-            if (this.active) {
-                this.x = this.sprite.x
-                this.y = this.sprite.y
-                this.draw()
-            }
-        }
     }
 
-    class ExplosionAttackChecker extends AttackChecker {
-        
+    class ExplosionAttackAnimation implements AttackAnimation {
 
+        private sprite:Sprite;
+        private radius:number
+
+        constructor(sprite:Sprite, radius:number) {
+            this.sprite = sprite
+            this.radius = radius
+        }
+
+        draw(canvas:Image) {
+            canvas.fillCircle(this.sprite.x, this.sprite.y, this.radius, COLOR_OUTER)
+            canvas.fillCircle(this.sprite.x, this.sprite.y, this.radius / 3 * 2, COLOR_INNER)
+            
+        }
+
+    }
+    
+
+    class ExplosionAttackChecker extends AttackChecker {
         private x:number;
         private y:number;
         private radius:number;
@@ -260,8 +236,35 @@ namespace attackEffect {
         }
     }
 
+    class AnimationHolder {
+        private animations: AttackAnimation[]
+        private canvas:Image
+        constructor(){
+            this.animations = []
+            this.canvas = image.create(160, 120)
+            this._init()
+        }
+        registerAnimation(animation:AttackAnimation) {
+            this.animations.push(animation)
+        }
+        unregisterAnimation(animation:AttackAnimation) {
+            this.animations.removeElement(animation)
+        }
+
+        _init() {
+            game.onPaint(() => {
+                this.canvas.fill(0)
+                for (let animation of this.animations) {
+                    animation.draw(this.canvas)
+                }
+                screen.drawTransparentImage(this.canvas, 0, 0)
+            })
+        }
+
+    }
+
     let checker = new LaserAttackChecker()
-    let laserAttackAnimation = new LaserAttackAnimation()
+    
     let laserAttackCallbacks: OnHitCallback[] = []
 
     //% blockId=launch_laser_attack
@@ -270,20 +273,17 @@ namespace attackEffect {
     //% group="Attack"
     export function laserAttack(sprite: Sprite, direction: LaserAttackDirection,
         width: number, duration: number) {
-
+        
         checker.define(sprite, width, direction)
-        laserAttackAnimation.define(sprite, width, direction)
+        let laserAttackAnimation = new LaserAttackAnimation(sprite, width, direction)
+        animationHolder.registerAnimation(laserAttackAnimation)
 
         control.runInParallel(function () {
             pause(duration)
             checker.stop()
-            laserAttackAnimation.stopAnimation()
+            animationHolder.unregisterAnimation(laserAttackAnimation)
         })
     }
-
-
-
-    
 
     //% blockId=on_laser_hit
     //% group="Attack"
@@ -294,6 +294,7 @@ namespace attackEffect {
     }
 
     let explosionAttackChecker = new ExplosionAttackChecker()
+    let animationHolder = new AnimationHolder()
 
     //% blockId=on_explosion_hit
     //% group="Attack"
@@ -313,6 +314,13 @@ namespace attackEffect {
         let checker = explosionAttackChecker.clone()
         checker.define(sprite.x, sprite.y, radius) 
         checker.notifyOnHitCallbacks()
+
+        let animation = new ExplosionAttackAnimation(sprite, radius)
+        animationHolder.registerAnimation(animation)
+        control.runInParallel(function(){
+            pause(1000)
+            animationHolder.unregisterAnimation(animation)
+        })
     }
 
 }
