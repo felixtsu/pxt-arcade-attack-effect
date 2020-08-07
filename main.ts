@@ -304,23 +304,28 @@ namespace attackEffect {
         explosionAttackChecker.registerOnHitCallbacks(spriteKind, spriteHitCallback)
     }
     //% blockId=explode_attack
-    //% block="explode %sprite=variables_get(mySprite) with radius %radius "
-     //% radius.defl=20 
+    //% block="explode %sprite=variables_get(mySprite) with radius %radius %period ms later"
+    //% radius.defl=20 
+    //% period.defl=500
     //% group="Attack"
-    export function explode(sprite:Sprite, radius:number) {
+    export function explode(sprite:Sprite, radius:number, period:number) {
         sprite.vx = 0
         sprite.vy = 0 
-        sprite.destroy(effects.spray, 1000)
-        let checker = explosionAttackChecker.clone()
-        checker.define(sprite.x, sprite.y, radius) 
-        checker.notifyOnHitCallbacks()
+        sprite.destroy(effects.spray, period)
 
-        let animation = new ExplosionAttackAnimation(sprite, radius)
-        animationHolder.registerAnimation(animation)
-        control.runInParallel(function(){
+        control.runInParallel(function() {
+            pause(period)
+
+            let checker = explosionAttackChecker.clone()
+            checker.define(sprite.x, sprite.y, radius) 
+            checker.notifyOnHitCallbacks()
+
+            let animation = new ExplosionAttackAnimation(sprite, radius)
+            animationHolder.registerAnimation(animation)
             pause(1000)
             animationHolder.unregisterAnimation(animation)
         })
+        
     }
 
 }
