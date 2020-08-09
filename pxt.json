@@ -3,7 +3,8 @@
     "version": "0.1.6",
     "description": "special attacks",
     "dependencies": {
-        "device": "*"
+        "device": "*",
+        "animation": "*"
     },
     "files": [
         "main.blocks",
