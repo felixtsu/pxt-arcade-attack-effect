@@ -1,5 +1,5 @@
 // % weight=100 color=#6699CC icon="\u2593"
-// block="SpecialAttack" % groups='["Attack"]'
+// block="SpecialAttack" % groups='["Laser", "Explosion"]'
 namespace attackEffect {
 
     export enum LaserAttackDirection {
@@ -270,7 +270,7 @@ namespace attackEffect {
     //% blockId=launch_laser_attack
     //% block="launch laser attack from %sprite=variables_get(mySprite) to %direction=direction by %width for %duration=timePicker|ms"
      //% width.defl=40 duration.defl=1000 direction.defl= LaserAttackDirection.RIGHT
-    //% group="Attack"
+    //% group="Laser"
     export function laserAttack(sprite: Sprite, direction: LaserAttackDirection,
         width: number, duration: number) {
         
@@ -286,7 +286,7 @@ namespace attackEffect {
     }
 
     //% blockId=on_laser_hit
-    //% group="Attack"
+    //% group="Laser"
     //% block="on laser hits of %spriteKind=spritekind"
     //% draggableParameters="sprite"
     export function onLaserHit(spriteKind: number, spriteHitCallback: (sprite: Sprite) => void) {
@@ -297,7 +297,7 @@ namespace attackEffect {
     let animationHolder = new AnimationHolder()
 
     //% blockId=on_explosion_hit
-    //% group="Attack"
+    //% group="Explosion"
     //% block="on explosion hits of %spriteKind=spritekind"
     //% draggableParameters="sprite"
     export function onExplosionHit(spriteKind: number, spriteHitCallback: (sprite: Sprite) => void) {
@@ -423,7 +423,7 @@ namespace attackEffect {
     //% block="explode %sprite=variables_get(mySprite) with radius %radius %period ms later"
     //% radius.defl=20 
     //% period.defl=500
-    //% group="Attack"
+    //% group="Explosion"
     export function explode(sprite:Sprite, radius:number, period:number) {
         sprite.vx = 0
         sprite.vy = 0 
